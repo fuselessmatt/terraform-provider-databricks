@@ -3,8 +3,6 @@ subcategory: "AWS"
 ---
 # databricks_mws_vpc_endpoint Resource
 
--> **Public Preview** This feature is in [Public Preview](https://docs.databricks.com/release-notes/release-types.html). Contact your Databricks representative to request access. 
-
 Enables you to register [aws_vpc_endpoint](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) resources with Databricks such that they can be used as part of a [databricks_mws_networks](mws_networks.md) configuration.
 
 It is strongly recommended that customers read the [Enable Private Link](https://docs.databricks.com/administration-guide/cloud-configurations/aws/privatelink.html) documentation before trying to leverage this resource.
@@ -17,23 +15,23 @@ Before using this resource, you will need to create the necessary VPC Endpoints 
 
 ```hcl
 resource "aws_vpc_endpoint" "workspace" {
-  vpc_id             = module.vpc.vpc_id
-  service_name       = local.private_link.workspace_service
-  vpc_endpoint_type  = "Interface"
-  security_group_ids = [module.vpc.default_security_group_id]
-  subnet_ids         = [aws_subnet.pl_subnet.id]
-  depends_on         = [aws_subnet.pl_subnet]
-  private_dns_enabled = true  
+  vpc_id              = module.vpc.vpc_id
+  service_name        = local.private_link.workspace_service
+  vpc_endpoint_type   = "Interface"
+  security_group_ids  = [module.vpc.default_security_group_id]
+  subnet_ids          = [aws_subnet.pl_subnet.id]
+  depends_on          = [aws_subnet.pl_subnet]
+  private_dns_enabled = true
 }
 
 resource "aws_vpc_endpoint" "relay" {
-  vpc_id             = module.vpc.vpc_id
-  service_name       = local.private_link.relay_service
-  vpc_endpoint_type  = "Interface"
-  security_group_ids = [module.vpc.default_security_group_id]
-  subnet_ids         = [aws_subnet.pl_subnet.id]
-  depends_on         = [aws_subnet.pl_subnet]
-  private_dns_enabled = true  
+  vpc_id              = module.vpc.vpc_id
+  service_name        = local.private_link.relay_service
+  vpc_endpoint_type   = "Interface"
+  security_group_ids  = [module.vpc.default_security_group_id]
+  subnet_ids          = [aws_subnet.pl_subnet.id]
+  depends_on          = [aws_subnet.pl_subnet]
+  private_dns_enabled = true
 }
 ```
 
@@ -114,7 +112,6 @@ The following arguments are required:
 * `account_id` - Account Id that could be found in the bottom left corner of [Accounts Console](https://accounts.cloud.databricks.com/)
 * `aws_vpc_endpoint_id` - ID of configured [aws_vpc_endpoint](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint)
 * `vpc_endpoint_name` - Name of VPC Endpoint in Databricks Account
-* `aws_endpoint_service_id` - ID of Databricks VPC endpoint service to connect to. Please contact your Databricks representative to request mapping
 * `region` - Region of AWS VPC
 
 ## Attribute Reference
@@ -122,6 +119,7 @@ The following arguments are required:
 In addition to all arguments above, the following attributes are exported:
 
 * `vpc_endpoint_id` - Canonical unique identifier of VPC Endpoint in Databricks Account
+* `aws_endpoint_service_id` - The ID of the Databricks endpoint service that this VPC endpoint is connected to. Please find the list of endpoint service IDs for each supported region in the [Databricks PrivateLink documentation](https://docs.databricks.com/administration-guide/cloud-configurations/aws/privatelink.html)
 * `state` - State of VPC Endpoint
 
 ## Import

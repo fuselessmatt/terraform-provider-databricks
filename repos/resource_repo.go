@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/databricks/terraform-provider-databricks/common"
@@ -54,14 +55,7 @@ func (a ReposAPI) Create(r reposCreateRequest) (ReposInformation, error) {
 		return resp, fmt.Errorf("git_provider isn't specified and we can't detect provider from URL")
 	}
 	if r.Path != "" {
-		if !strings.HasPrefix(r.Path, "/Repos/") {
-			return resp, fmt.Errorf("path should start with /Repos/")
-		}
-		p := r.Path
-		if strings.HasSuffix(r.Path, "/") {
-			p = strings.TrimSuffix(r.Path, "/")
-		}
-		p = path.Dir(p)
+		p := path.Dir(strings.TrimSuffix(r.Path, "/"))
 		if err := workspace.NewNotebooksAPI(a.context, a.client).Mkdirs(p); err != nil {
 			return resp, err
 		}
@@ -127,20 +121,44 @@ func (a ReposAPI) ListAll() ([]ReposInformation, error) {
 	return a.List("")
 }
 
-var gitProvidersMap = map[string]string{
-	"github.com":    "gitHub",
-	"dev.azure.com": "azureDevOpsServices",
-	"gitlab.com":    "gitLab",
-	"bitbucket.org": "bitbucketCloud",
-}
+var (
+	gitProvidersMap = map[string]string{
+		"github.com":    "gitHub",
+		"dev.azure.com": "azureDevOpsServices",
+		"gitlab.com":    "gitLab",
+		"bitbucket.org": "bitbucketCloud",
+	}
+	awsCodeCommitRegex = regexp.MustCompile(`^git-codecommit\.[^.]+\.amazonaws\.com$`)
+)
 
 func GetGitProviderFromUrl(uri string) string {
 	provider := ""
 	u, err := url.Parse(uri)
 	if err == nil {
-		provider = gitProvidersMap[strings.ToLower(u.Host)]
+		lhost := strings.ToLower(u.Host)
+		provider = gitProvidersMap[lhost]
+		if provider == "" && awsCodeCommitRegex.FindStringSubmatch(lhost) != nil {
+			provider = "awsCodeCommit"
+		}
 	}
 	return provider
+}
+
+func validatePath(i interface{}, k string) (_ []string, errors []error) {
+	v := i.(string)
+	if v != "" {
+		if !strings.HasPrefix(v, "/Repos/") {
+			errors = append(errors, fmt.Errorf("should start with /Repos/, got '%s'", v))
+			return
+		}
+		v = strings.TrimSuffix(v, "/")
+		parts := strings.Split(v, "/")
+		if len(parts) != 4 { // we require 3 path parts + starting /
+			errors = append(errors, fmt.Errorf("should have 3 components (/Repos/<directory>/<repo>), got %d", len(parts)-1))
+			return
+		}
+	}
+	return
 }
 
 func ResourceRepo() *schema.Resource {
@@ -151,6 +169,7 @@ func ResourceRepo() *schema.Resource {
 		}
 		s["branch"].ConflictsWith = []string{"tag"}
 		s["branch"].ValidateFunc = validation.StringIsNotWhiteSpace
+		s["path"].ValidateFunc = validatePath
 
 		s["tag"] = &schema.Schema{
 			Type:          schema.TypeString,
